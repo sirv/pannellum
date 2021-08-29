@@ -7,6 +7,7 @@ import subprocess
 import urllib.parse
 
 JS = [
+'js/polyfill.js',
 'js/libpannellum.js',
 'js/pannellum.js',
 ]
@@ -16,7 +17,7 @@ CSS = [
 ]
 
 HTML = [
-'standalone/pannellum.htm'
+'embed/embed.html'
 ]
 
 def merge(files):
@@ -58,7 +59,7 @@ def cssCompress(text):
     os.unlink(out_tuple[1])
     return compressed
 
-def htmlCompress(text):    
+def htmlCompress(text):
     in_tuple = tempfile.mkstemp()
     with os.fdopen(in_tuple[0], 'w') as handle:
         handle.write(text)
@@ -86,15 +87,15 @@ def addHeaderJS(text, version):
 def build(files, css, html, filename, release=False):
     folder = ''
     os.makedirs('../../build', exist_ok=True)
-    
+
     cssfilename = filename + '.css'
-    htmlfilename = filename + '.htm'
+    htmlfilename = 'embed.html'
     filename = filename + '.js'
-    
+
     print('=' * 40)
     print('Compiling', filename)
     print('=' * 40)
-    
+
     js = merge(files)
     if release:
         version = read('../VERSION').strip()
@@ -105,19 +106,19 @@ def build(files, css, html, filename, release=False):
             print('No .git folder detected, setting version to testing')
             version = "testing"
     js = js.replace('// VERSION PLACEHOLDER FOR BUILD', 'aboutMsgVersion.textContent = " ' + version + '";')
-    with open('../../src/standalone/standalone.js', 'r') as f:
+    with open('../../src/embed/embed.js', 'r') as f:
         standalone_js = f.read()
     standalone_js = JScompress(js + standalone_js)
     js = JScompress(js)
-    
+
     print('=' * 40)
     print('Compiling', cssfilename)
     print('=' * 40)
-    
+
     css = merge(css)
     css = css.replace("'img/grab.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/grab.svg'),'') + "'")
     css = css.replace("'img/grabbing.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/grabbing.svg'),'') + "'")
-    with open('../../src/standalone/standalone.css', 'r') as f:
+    with open('../../src/embed/embed.css', 'r') as f:
         standalone_css = f.read()
     standalone_css = cssCompress(css + standalone_css)
     standalone_css = standalone_css.replace("'img/sprites.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/sprites.svg'),'') + "'")
@@ -127,20 +128,21 @@ def build(files, css, html, filename, release=False):
     css = css.replace("'img/sprites.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/sprites.svg'),'') + "'")
     css = css.replace("'img/background.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/background.svg'),'') + "'")
     css = css.replace("'img/compass.svg'","'data:image/svg+xml," + urllib.parse.quote(read('css/img/compass.svg'),'') + "'")
-    
+
     print('=' * 40)
     print('Compiling', htmlfilename)
     print('=' * 40)
-    
+
     html = merge(html)
-    html = html.replace('<link type="text/css" rel="Stylesheet" href="../css/pannellum.css"/>','<style type="text/css">' + standalone_css + '</style>')
+    html = html.replace('<link type="text/css" rel="stylesheet" href="../css/pannellum.css"/>','<style type="text/css">' + standalone_css + '</style>')
     html = html.replace('<script type="text/javascript" src="../js/libpannellum.js"></script>','')
     html = html.replace('<script type="text/javascript" src="../js/pannellum.js"></script>','<script type="text/javascript">' + standalone_js + '</script>')
-    html = html.replace('<script type="text/javascript" src="standalone.js"></script>','')
-    html = html.replace('<link type="text/css" rel="Stylesheet" href="standalone.css"/>', '')
+    html = html.replace('<script type="text/javascript" src="embed.js"></script>','')
+    html = html.replace('<link type="text/css" rel="stylesheet" href="embed.css"/>', '')
     html = htmlCompress(html)
-    
-    output(addHeaderHTML(html, version), folder + htmlfilename)
+
+    # output(addHeaderHTML(html, version), folder + htmlfilename)
+    output(html, folder + htmlfilename)
     output(addHeaderCSS(css, version), folder + cssfilename)
     output(addHeaderJS(js, version), folder + filename)
 
